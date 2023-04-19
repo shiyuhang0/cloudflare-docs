@@ -13,14 +13,14 @@ With Cloudflare Gateway, you can [enable and configure](/cloudflare-one/policies
 Gateway applies your policies in the following order:
 
 1. DNS
-2. HTTP
-3. Network
+2. Network
+3. HTTP
 
 DNS policies are standalone. For example, if you block a site with a DNS policy but do not create a corresponding HTTP policy, users can still access the site if they know its IP address.
 
-Next, Gateway evaluates HTTP policies in [a specific order](#http-policies). For example, if you block a specific source IP in an HTTP policy but allow the IP range in a network policy, the IP address will be blocked.
+Next, Gateway checks the traffic against your network policies. For example, even if you create a Do Not Inspect HTTP policy for a site, it can be blocked by a subsequent network policy.
 
-Lastly, if traffic passes your HTTP policies, Gateway checks the traffic against your network policies. For example, even if you create a Do Not Inspect HTTP policy for a site, it can be blocked by a subsequent network policy.
+Lastly, Gateway evaluates HTTP policies in [a specific order](#http-policies). For example, if you block a specific source IP in an HTTP policy but allow the IP range in a network policy, the IP address will be blocked.
 
 ## Priority within a policy builder
 
@@ -61,22 +61,27 @@ In Gateway, the order of precedence follows the first match principle — once a
 Suppose you have a list of policies arranged in the following order of precedence:
 
 - DNS policies:
-  | Precedence | Selector | Operator | Value | Action |
-  | ------ | ---------------| ---------| ----------------| -------------- |
-  | 1 | Host | is | `example.com` | Block |
-  | 2 | Host | is | `test.example.com` | Allow |
-  | 3 | Domain | matches regex | `.\` | Block |
-- HTTP policies:
-  | Precedence | Selector | Operator | Value | Action |
-  | ------ | ---------------| ---------| ----------------| -------------- |
-  | 1 | Host | is | `example.com` | Block |
-  | 2 | Host | is | `test2.example.com` | Do Not Inspect |
+
+  | Precedence | Selector | Operator      | Value              | Action |
+  | ---------- | -------- | ------------- | ------------------ | ------ |
+  | 1          | Host     | is            | `example.com`      | Block  |
+  | 2          | Host     | is            | `test.example.com` | Allow  |
+  | 3          | Domain   | matches regex | `.\`               | Block  |
+
 - Network policies:
-  | Precedence | Selector | Operator | Value | Action |
-  | ------ | ---------------| ---------| ----------------| -------------- |
-  | 1 | Destination Port | is | `80` | Block |
-  | 2 | Destination port | is | `443` | Allow |
-  | 3 | SNI Domain | is | `test.example.com` | Block |
+
+  | Precedence | Selector         | Operator | Value              | Action |
+  | ---------- | ---------------- | -------- | ------------------ | ------ |
+  | 1          | Destination Port | is       | `80`               | Block  |
+  | 2          | Destination port | is       | `443`              | Allow  |
+  | 3          | SNI Domain       | is       | `test.example.com` | Block  |
+
+- HTTP policies:
+
+  | Precedence | Selector | Operator | Value               | Action         |
+  | ---------- | -------- | -------- | ------------------- | -------------- |
+  | 1          | Host     | is       | `example.com`       | Block          |
+  | 2          | Host     | is       | `test2.example.com` | Do Not Inspect |
 
 When a user navigates to `https://test.example.com`, Gateway performs the following operations:
 
@@ -86,15 +91,15 @@ When a user navigates to `https://test.example.com`, Gateway performs the follow
    2. Policy #2 matches, so DNS resolution is Allowed.
    3. Policy #3 is not evaluated because there has already been an explicit match.
 
-2. Evaluate HTTPS request against HTTP policies:
-
-   1. Policy #2 is evaluated first because Do Not Inspect [always takes precedence](#http-policies) over Allow and Block. Since there is no match, move on to check Policy #1.
-   2. Policy #1 does not match `test.example.com`. Since there are no matching Block policies, the request passes the HTTP filter and moves on to network policy evaluation.
-
-3. Evaluate HTTPS request against network policies:
+2. Evaluate HTTPS request against network policies:
 
    1. Policy #1 does not match because port 80 is used for standard HTTP, not HTTPS.
    2. Policy #2 matches, so the request is Allowed and proxied to the upstream server.
    3. Policy #3 is not evaluated because there has already been an explicit match.
+
+3. Evaluate HTTPS request against HTTP policies:
+
+   1. Policy #2 is evaluated first because Do Not Inspect [always takes precedence](#http-policies) over Allow and Block. Since there is no match, move on to check Policy #1.
+   2. Policy #1 does not match `test.example.com`. Since there are no matching Block policies, the request passes the HTTP filter and moves on to network policy evaluation.
 
 The user is therefore able to connect to `https://test.example.com`.
