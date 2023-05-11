@@ -32,7 +32,7 @@ In your terminal, you will be asked a series of questions related to your projec
 
 {{<Aside type="note" header="TypeScript">}}
 
-`wrangler init` will prompt you to choose y/n to `Would you like to use TypeScript? (y/n)`. If you indicate yes, you will get an `index.ts` file instead of a `index.js` file and Wrangler will also generate a `tsconfig.json` file in the root of your project.
+`wrangler init` will prompt you to choose `y` or `n` to `Would you like to use TypeScript? (y/n)`. If you indicate yes, you will get an `index.ts` file instead of a `index.js` file and Wrangler will also generate a `tsconfig.json` file in the root of your project.
 
 {{</Aside>}}
 
